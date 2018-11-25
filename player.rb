@@ -1,17 +1,12 @@
 class Player
-  attr_reader :name, :cards
+  attr_reader :name, :hand
 
   def initialize(name)
     @name = name
-    @cards = []
+    @hand = Hand.new
   end
 
   def turn
-  end
-
-  def points
-  end
-
-  def new_round
+    raise NotImplementedError
   end
 end
