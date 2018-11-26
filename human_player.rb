@@ -1,3 +1,5 @@
+require_relative 'player'
+
 class HumanPlayer < Player
   def turn(variants)
     ask('Your turn: ', variants)
