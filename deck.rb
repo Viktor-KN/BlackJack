@@ -23,7 +23,7 @@ class Deck
   attr_reader :cards
 
   def card_suits
-    %i[spades hearts dimonds clubs]
+    %i[spades hearts diamonds clubs]
   end
 
   def card_ranks
