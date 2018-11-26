@@ -29,6 +29,10 @@ class Bank
     players[name]
   end
 
+  def bet(name)
+    bets[name]
+  end
+
   def bets_amount
     bets.values.sum
   end
