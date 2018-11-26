@@ -5,11 +5,15 @@ class DealerPlayer < Player
     super('Dealer')
   end
 
-  def turn(variants)
+  def turn
     if hand.cards.size < 3 && hand.points < 17
-      variants.select { |_key, var| var[:action] == :take_card }
+      TAKE_CARD_VARIANT
     else
-      variants.select { |_key, var| var[:action] == :pass_turn }
+      PASS_TURN_VARIANT
     end
+  end
+
+  def dealer?
+    true
   end
 end
