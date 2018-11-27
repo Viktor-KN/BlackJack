@@ -17,8 +17,8 @@ class BlackJackGame
     player_name = gets.strip.capitalize
     self.player = HumanPlayer.new(player_name)
     self.dealer = DealerPlayer.new
-
     self.players = [player, dealer]
+
     loop do
       fsm.update
     end
@@ -48,24 +48,19 @@ class BlackJackGame
   def init
     self.bank = Bank.new
     self.deck = Deck.new
-
-    players.each do |player|
-      player.hand.cards.clear
-      bank.add_player(player.name, init_amount)
-    end
+    players.each { |player| bank.add_player(player.name, init_amount) }
 
     fsm.active_state = :new_round
   end
 
   def new_round
-    puts '----------------- new round ----------------------'
+    puts "\n\n----------------- new round ----------------------"
     puts 'Shuffling deck.'
     deck.shuffle!
     puts 'Dealing cards.'
     deal_cards
     puts 'Making bets.'
     bank.make_bets(bet_amount)
-
 
     fsm.active_state = :round_loop
   end
@@ -76,12 +71,10 @@ class BlackJackGame
 
   def show_players_info(opts = {})
     players.reverse_each do |player|
-      if player.dealer? && opts[:mask_dealer_cards_points] == true
-        cards = player.hand.show_cards(mask_cards: true)
-        points = 'XX'
-      else
-        cards = player.hand.show_cards
-        points = player.hand.points
+      cards, points = if player.dealer? && opts[:mask_dealer_cards_points] == true
+                        [player.hand.show_cards(mask_cards: true), 'XX']
+                      else
+                        [player.hand.show_cards, player.hand.points]
       end
       puts player.name
       printf("  Cards: %-12sPoints: %-4sBet: %-6sBalance: %s\n",
@@ -96,8 +89,6 @@ class BlackJackGame
     end
     show_players_info(mask_dealer_cards_points: true)
     players.each do |player|
-      # return fsm.active_state = :end_round unless player.dealer? || player.hand.points <= 21
-
       variant = player.turn
       player.variants.delete(variant)
       puts "#{player.name} choose to #{variant[:title]}"
@@ -111,7 +102,7 @@ class BlackJackGame
   end
 
   def take_card(player)
-    card = deck.get_card
+    card = deck.take_card
     puts "#{player.name} received new card: #{player.dealer? ? card.to_s(mask_cards: true) : card}"
     player.hand.cards << card
   end
@@ -142,5 +133,24 @@ class BlackJackGame
       player.init_variants
     end
     fsm.active_state = :new_round
+  end
+
+  def dealer_loose
+    ask_choice('win')
+  end
+
+  def player_loose
+    ask_choice('loose')
+  end
+
+  def ask_choice(game_result)
+    print "You #{game_result} this game. Would you like to start new one? (Y/N): "
+    until /Y|N/ =~ (choice = gets.strip.upcase)
+      print 'Incorrect choice provided! Enter Y or N: '
+    end
+
+    return fsm.active_state = :init if choice == 'Y'
+
+    exit(0)
   end
 end

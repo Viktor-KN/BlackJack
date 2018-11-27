@@ -6,7 +6,7 @@ class Deck
     fill_deck
   end
 
-  def get_card
+  def take_card
     cards.pop
   end
 
