@@ -6,12 +6,27 @@ class Hand
   end
 
   def points
-    points = calc_points(cards)
-    if points > 21
-      alt_points = calc_points(cards.reverse)
-      return [points, alt_points].min
+    solid_points = []
+    variable_points = []
+    points_variants = []
+
+    cards.each do |card|
+      if card.points.key?(:alt_val)
+        variable_points << [card.points[:val], card.points[:alt_val]]
+      else
+        solid_points << card.points[:val]
+      end
     end
-    points
+
+    return solid_points.sum if variable_points.empty?
+
+    variable_points_size = variable_points.size
+    variable_points = variable_points.flatten.combination(variable_points_size).uniq
+    variable_points.each do |elem|
+      points_variants << (solid_points + elem).sum
+    end
+
+    points_variants.select { |var| var <= 21 }.max
   end
 
   def show_cards(opts = {})
@@ -21,13 +36,13 @@ class Hand
   private
 
   def calc_points(cards)
-    cards.reduce(0) do |sum, card|
-      card_points = if card.points.key?(:overflow) && sum >= card.points[:overflow]
-                      card.points[:overflow_value]
-                    else
-                      card.points[:value]
-                    end
-      sum + card_points
-    end
+    # cards.reduce(0) do |sum, card|
+    #   card_points = if card.points.key?(:add) && sum >= card.points[:overflow]
+    #                   card.points[:overflow_value]
+    #                 else
+    #                   card.points[:value]
+    #                 end
+    #   sum + card_points
+    # end
   end
 end

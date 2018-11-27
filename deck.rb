@@ -32,19 +32,19 @@ class Deck
 
   def card_points
     {
-      '2' => { value: 2 },
-      '3' => { value: 3 },
-      '4' => { value: 4 },
-      '5' => { value: 5 },
-      '6' => { value: 6 },
-      '7' => { value: 7 },
-      '8' => { value: 8 },
-      '9' => { value: 9 },
-      '10' => { value: 10 },
-      'J' => { value: 10 },
-      'Q' => { value: 10 },
-      'K' => { value: 10 },
-      'A' => { value: 11, overflow: 10, overflow_value: 1 }
+      '2' => { val: 2 },
+      '3' => { val: 3 },
+      '4' => { val: 4 },
+      '5' => { val: 5 },
+      '6' => { val: 6 },
+      '7' => { val: 7 },
+      '8' => { val: 8 },
+      '9' => { val: 9 },
+      '10' => { val: 10 },
+      'J' => { val: 10 },
+      'Q' => { val: 10 },
+      'K' => { val: 10 },
+      'A' => { val: 11, alt_val: 1 }
     }
   end
 
