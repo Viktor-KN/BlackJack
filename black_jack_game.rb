@@ -58,15 +58,7 @@ class BlackJackGame
   end
 
   def new_round
-    players.each do |player|
-      if bank.balance(player.name) < bet_amount
-        return fsm.active_state = player.dealer? ? :dealer_loose : :player_loose
-      end
-
-      deck.return_cards(player.hand.cards)
-      player.hand.cards.clear
-    end
-    puts 'New round.'
+    puts '----------------- new round ----------------------'
     puts 'Shuffling deck.'
     deck.shuffle!
     puts 'Dealing cards.'
@@ -82,10 +74,10 @@ class BlackJackGame
     init_cards.times { players.each(&method(:take_card)) }
   end
 
-  def show_player_info(opts = {})
+  def show_players_info(opts = {})
     players.reverse_each do |player|
-      if player.dealer? && opts[:hide_cards_points] == true
-        cards = player.hand.show_cards(hide_cards: true)
+      if player.dealer? && opts[:mask_dealer_cards_points] == true
+        cards = player.hand.show_cards(mask_cards: true)
         points = 'XX'
       else
         cards = player.hand.show_cards
@@ -98,30 +90,57 @@ class BlackJackGame
   end
 
   def round_loop
-    show_player_info(hide_cards_points: true)
-    variant = nil
+    if player.hand.cards.size == cards_max && dealer.hand.cards.size == cards_max
+      puts 'Each player have 3 cards. Opening cards.'
+      return fsm.active_state = :end_round
+    end
+    show_players_info(mask_dealer_cards_points: true)
     players.each do |player|
-      return fsm.active_state = :end_round unless player.dealer? || player.hand.points <= 21
+      # return fsm.active_state = :end_round unless player.dealer? || player.hand.points <= 21
 
       variant = player.turn
       player.variants.delete(variant)
       puts "#{player.name} choose to #{variant[:title]}"
-      send variant[:action], player
+      if variant[:action] == :open_cards
+        fsm.active_state = :end_round
+        break
+      elsif variant[:action] == :take_card
+        take_card(player)
+      end
     end
-    sleep 2
   end
 
   def take_card(player)
     card = deck.get_card
-    puts "#{player.name} received new card: #{player.dealer? ? card.to_s(hide_cards: true) : card}"
+    puts "#{player.name} received new card: #{player.dealer? ? card.to_s(mask_cards: true) : card}"
     player.hand.cards << card
   end
 
-  def pass_turn(player)
+  def end_round
+    puts '---------------- end of round --------------------'
+    show_players_info
+    player_points = player.hand.points
+    dealer_points = dealer.hand.points
+    if player_points == dealer_points || (player_points > 21 && dealer_points > 21)
+      bank.tie
+      puts 'Tie! No one won. Bets returned to players.'
+    elsif player_points > 21 || (player_points < dealer_points && dealer_points <= 21)
+      bank.winner(dealer.name)
+      puts 'You loose this round!'
+    else
+      bank.winner(player.name)
+      puts 'You won this round!'
+    end
 
-  end
+    players.each do |player|
+      if bank.balance(player.name) < bet_amount
+        return fsm.active_state = player.dealer? ? :dealer_loose : :player_loose
+      end
 
-  def open_cards(_player)
-    fsm.active_state = :end_round
+      deck.return_cards(player.hand.cards)
+      player.hand.cards.clear
+      player.init_variants
+    end
+    fsm.active_state = :new_round
   end
 end
