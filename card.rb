@@ -15,7 +15,7 @@ class Card
   end
 
   def to_s(opts = {})
-    opts[:hide_cards] ? '**' : "#{rank}#{SUIT_GLYPHS[suit]}"
+    opts[:mask_cards] ? '**' : "#{rank}#{SUIT_GLYPHS[suit]}"
   end
 
 end

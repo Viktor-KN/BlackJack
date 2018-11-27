@@ -11,14 +11,14 @@ class Deck
   end
 
   def return_cards(cards)
-    cards.push(*cards)
+    self.cards.push(*cards)
   end
 
   def shuffle!
     cards.shuffle!
   end
 
-  private
+  protected
 
   attr_reader :cards
 
@@ -44,7 +44,7 @@ class Deck
       'J' => { value: 10 },
       'Q' => { value: 10 },
       'K' => { value: 10 },
-      'A' => { value: 11, overflow: 11, overflow_value: 1 }
+      'A' => { value: 11, overflow: 10, overflow_value: 1 }
     }
   end
 
