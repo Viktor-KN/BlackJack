@@ -92,6 +92,7 @@ class BlackJackGame
       variant = player.turn
       player.variants.delete(variant)
       puts "#{player.name} choose to #{variant[:title]}"
+
       if variant[:action] == :open_cards
         fsm.active_state = :end_round
         break
@@ -109,19 +110,22 @@ class BlackJackGame
 
   def end_round
     puts '---------------- end of round --------------------'
-    show_players_info
     player_points = player.hand.points
     dealer_points = dealer.hand.points
+
     if player_points == dealer_points || (player_points > 21 && dealer_points > 21)
       bank.tie
-      puts 'Tie! No one won. Bets returned to players.'
+      msg = 'Tie! No one won. Bets returned to players.'
     elsif player_points > 21 || (player_points < dealer_points && dealer_points <= 21)
       bank.winner(dealer.name)
-      puts 'You loose this round!'
+      msg = 'You loose this round!'
     else
       bank.winner(player.name)
-      puts 'You won this round!'
+      msg = 'You won this round!'
     end
+
+    show_players_info
+    puts msg
 
     players.each do |player|
       if bank.balance(player.name) < bet_amount
@@ -133,6 +137,8 @@ class BlackJackGame
       player.init_variants
     end
     fsm.active_state = :new_round
+    puts 'Press Enter to start new round...'
+    gets
   end
 
   def dealer_loose
@@ -145,6 +151,7 @@ class BlackJackGame
 
   def ask_choice(game_result)
     print "You #{game_result} this game. Would you like to start new one? (Y/N): "
+
     until /Y|N/ =~ (choice = gets.strip.upcase)
       print 'Incorrect choice provided! Enter Y or N: '
     end
