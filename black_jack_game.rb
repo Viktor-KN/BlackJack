@@ -2,11 +2,11 @@ require_relative 'bank'
 require_relative 'deck'
 require_relative 'human_player'
 require_relative 'dealer_player'
-require_relative 'final_state_machine'
+require_relative 'finite_state_machine'
 
 class BlackJackGame
   def initialize
-    @fsm = FinalStateMachine.new(self)
+    @fsm = FiniteStateMachine.new(self)
     @fsm.active_state = :init
   end
 

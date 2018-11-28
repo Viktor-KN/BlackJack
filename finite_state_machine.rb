@@ -1,4 +1,4 @@
-class FinalStateMachine
+class FiniteStateMachine
   attr_accessor :active_state
 
   def initialize(caller)
