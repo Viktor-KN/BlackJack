@@ -22,6 +22,7 @@ class Hand
 
     variable_points_size = variable_points.size
     variable_points = variable_points.flatten.combination(variable_points_size).uniq
+
     variable_points.each do |elem|
       points_variants << (solid_points + elem).sum
     end
@@ -30,6 +31,8 @@ class Hand
   end
 
   def show_cards(opts = {})
-    cards.reduce('') { |memo, card| "#{memo}#{memo.empty? ? '' : '  '}#{card.to_s(opts)}" }
+    cards.reduce('') do |memo, card|
+      "#{memo}#{memo.empty? ? '' : '  '}#{opts[:mask_cards] ? '**' : card}"
+    end
   end
 end
