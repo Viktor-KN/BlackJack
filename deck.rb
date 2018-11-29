@@ -23,8 +23,8 @@ class Deck
   attr_reader :cards
 
   def fill_deck
-    Card.SUITS.each do |suit|
-      Card.RANKS.each { |rank| cards << Card.new(rank, suit, Card.POINTS[rank]) }
+    Card::SUITS.each do |suit|
+      Card::RANKS.each { |rank| cards << Card.new(rank, suit, Card::POINTS[rank]) }
     end
   end
 end
