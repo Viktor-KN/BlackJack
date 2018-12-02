@@ -5,20 +5,13 @@ require_relative 'dealer_player'
 require_relative 'finite_state_machine'
 
 class BlackJackGame
-  def initialize
+  def initialize(controller)
     @fsm = FiniteStateMachine.new(self)
-    @fsm.active_state = :init
+    @c = controller
+    @fsm.active_state = :init_game
   end
 
   def run
-    puts 'Welcome to Blackjack game!'
-
-    print 'Enter your name: '
-    player_name = gets.strip.capitalize
-    self.player = HumanPlayer.new(player_name)
-    self.dealer = DealerPlayer.new
-    self.players = [player, dealer]
-
     loop do
       fsm.update
     end
@@ -27,7 +20,7 @@ class BlackJackGame
   private
 
   attr_accessor :bank, :player, :dealer, :players, :deck
-  attr_reader :fsm
+  attr_reader :fsm, :c
 
   def init_amount
     100
@@ -45,7 +38,18 @@ class BlackJackGame
     3
   end
 
-  def init
+  # Game states
+
+  def init_game
+    c.message 'Welcome to Blackjack game!'
+    player_name = c.ask_simple(question: 'Enter your name: ')
+    self.player = HumanPlayer.new(player_name.capitalize)
+    self.dealer = DealerPlayer.new
+    self.players = [player, dealer]
+    fsm.active_state = :new_game
+  end
+
+  def new_game
     self.bank = Bank.new
     self.deck = Deck.new
     players.each { |player| bank.add_player(player.name, init_amount) }
@@ -54,44 +58,25 @@ class BlackJackGame
   end
 
   def new_round
-    puts "\n\n----------------- new round ----------------------"
-    puts 'Shuffling deck.'
+    init_players
+    c.message(type: :new_round)
     deck.shuffle!
-    puts 'Dealing cards.'
     deal_cards
-    puts 'Making bets.'
     bank.make_bets(bet_amount)
 
     fsm.active_state = :round_loop
   end
 
-  def deal_cards
-    init_cards.times { players.each(&method(:take_card)) }
-  end
-
-  def show_players_info(opts = {})
-    players.reverse_each do |player|
-      cards, points = if player.dealer? && opts[:mask_dealer_cards_points] == true
-                        [player.hand.show_cards(mask_cards: true), 'XX']
-                      else
-                        [player.hand.show_cards, player.hand.points]
-      end
-      puts player.name
-      printf("  Cards: %-12sPoints: %-4sBet: %-6sBalance: %s\n",
-             cards, points, bank.bet(player.name), bank.balance(player.name))
-    end
-  end
-
   def round_loop
-    if player.hand.cards.size == cards_max && dealer.hand.cards.size == cards_max
-      puts 'Each player have 3 cards. Opening cards.'
+    if players_have_max_cards?
+      c.message "Each player have 3 cards. Opening cards.\n"
       return fsm.active_state = :end_round
     end
     show_players_info(mask_dealer_cards_points: true)
+
     players.each do |player|
-      variant = player.turn
-      player.variants.delete(variant)
-      puts "#{player.name} choose to #{variant[:title]}"
+      variant = player.dealer? ? send(:dealer_turn) : send(:player_turn)
+      c.message "#{player.name} choose to #{variant[:title]}"
 
       if variant[:action] == :open_cards
         fsm.active_state = :end_round
@@ -102,43 +87,20 @@ class BlackJackGame
     end
   end
 
-  def take_card(player)
-    card = deck.take_card
-    puts "#{player.name} received new card: #{player.dealer? ? card.to_s(mask_cards: true) : card}"
-    player.hand.cards << card
-  end
-
   def end_round
-    puts '---------------- end of round --------------------'
-    player_points = player.hand.points
-    dealer_points = dealer.hand.points
+    c.message(type: :end_round)
 
-    if player_points == dealer_points || (player_points > 21 && dealer_points > 21)
-      bank.tie
-      msg = 'Tie! No one won. Bets returned to players.'
-    elsif player_points > 21 || (player_points < dealer_points && dealer_points <= 21)
-      bank.winner(dealer.name)
-      msg = 'You loose this round!'
-    else
-      bank.winner(player.name)
-      msg = 'You won this round!'
-    end
-
+    msg = get_round_result
     show_players_info
-    puts msg
+    c.message msg
 
     players.each do |player|
       if bank.balance(player.name) < bet_amount
         return fsm.active_state = player.dealer? ? :dealer_loose : :player_loose
       end
-
-      deck.return_cards(player.hand.cards)
-      player.hand.cards.clear
-      player.init_variants
     end
     fsm.active_state = :new_round
-    puts 'Press Enter to start new round...'
-    gets
+    c.pause
   end
 
   def dealer_loose
@@ -149,14 +111,82 @@ class BlackJackGame
     ask_choice('loose')
   end
 
-  def ask_choice(game_result)
-    print "You #{game_result} this game. Would you like to start new one? (Y/N): "
+  # Helper methods
 
-    until /Y|N/ =~ (choice = gets.strip.upcase)
-      print 'Incorrect choice provided! Enter Y or N: '
+  def init_players
+    players.each do |player|
+      deck.return_cards(player.hand.cards)
+      player.hand.cards.clear
+      player.init_variants
     end
+  end
 
-    return fsm.active_state = :init if choice == 'Y'
+  def player_turn
+    player.variants << Player::OPEN_CARDS_VARIANT if second_turn?
+    variant = c.ask_variants(question: 'Your turn: ', variants: player.variants)
+    player.variants.delete(variant)
+  end
+
+  def dealer_turn
+    if dealer.hand.cards.size < 3 && dealer.hand.points < 17
+      Player::TAKE_CARD_VARIANT
+    else
+      Player::PASS_TURN_VARIANT
+    end
+  end
+
+  def second_turn?
+    player.variants.size < 2 && !player.variants.include?(Player::OPEN_CARDS_VARIANT)
+  end
+
+  def deal_cards
+    init_cards.times { players.each(&method(:take_card)) }
+  end
+
+  def show_players_info(opts = {})
+    players.reverse_each do |player|
+      cards, points = if player.dealer? && opts[:mask_dealer_cards_points]
+                        [player.hand.show_cards(mask_cards: true), 'XX']
+                      else
+                        [player.hand.show_cards, player.hand.points]
+                      end
+      params = { player: player.name, cards: cards, points: points,
+                 bet: bank.bet(player.name), balance: bank.balance(player.name) }
+      c.message(type: :player_info, params: params)
+    end
+  end
+
+  def players_have_max_cards?
+    player.hand.cards.size == cards_max && dealer.hand.cards.size == cards_max
+  end
+
+  def take_card(player)
+    card = deck.take_card
+    card_name = player.dealer? ? '**' : card.to_s
+    c.message "#{player.name} received new card: #{card_name}"
+    player.hand.cards << card
+  end
+
+  def get_round_result
+    player_points = player.hand.points
+    dealer_points = dealer.hand.points
+
+    if player_points == dealer_points || (player_points > 21 && dealer_points > 21)
+      bank.tie
+      'Tie! No one won. Bets returned to players.'
+    elsif player_points > 21 || (player_points < dealer_points && dealer_points <= 21)
+      bank.winner(dealer.name)
+      'You loose this round!'
+    else
+      bank.winner(player.name)
+      'You won this round!'
+    end
+  end
+
+  def ask_choice(game_result)
+    choice = c.ask_yes_no(question: "You #{game_result} this game. Would you like to start new" \
+                          ' one? (Y/N): ')
+    return fsm.active_state = :new_game if choice == 'Y'
 
     exit(0)
   end

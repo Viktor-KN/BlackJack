@@ -1,3 +1,7 @@
 require_relative 'black_jack_game'
+require_relative 'terminal_view'
+require_relative 'terminal_controller'
 
-BlackJackGame.new.run
+view = TerminalView.new
+controller = TerminalController.new(view)
+BlackJackGame.new(controller).run

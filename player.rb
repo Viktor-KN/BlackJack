@@ -14,9 +14,5 @@ class Player
     init_variants
   end
 
-  def turn
-    raise NotImplementedError
-  end
-
   def init_variants; end
 end
