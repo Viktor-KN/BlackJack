@@ -6,9 +6,29 @@ class Hand
   end
 
   def points
+    solid_points, variable_points = sort_points_by_type
+
+    return solid_points.sum if variable_points.empty?
+
+    points_variants = []
+    variable_points_size = variable_points.size
+    variable_points = variable_points.flatten.combination(variable_points_size).uniq
+
+    variable_points.each { |elem| points_variants << (solid_points + elem).sum }
+    points_variants.select { |var| var <= 21 }.max
+  end
+
+  def show_cards(opts = {})
+    cards.reduce('') do |memo, card|
+      "#{memo}#{memo.empty? ? '' : '  '}#{opts[:mask_cards] ? '**' : card}"
+    end
+  end
+
+  private
+
+  def sort_points_by_type
     solid_points = []
     variable_points = []
-    points_variants = []
 
     cards.each do |card|
       if card.points.key?(:alt_val)
@@ -17,22 +37,6 @@ class Hand
         solid_points << card.points[:val]
       end
     end
-
-    return solid_points.sum if variable_points.empty?
-
-    variable_points_size = variable_points.size
-    variable_points = variable_points.flatten.combination(variable_points_size).uniq
-
-    variable_points.each do |elem|
-      points_variants << (solid_points + elem).sum
-    end
-
-    points_variants.select { |var| var <= 21 }.max
-  end
-
-  def show_cards(opts = {})
-    cards.reduce('') do |memo, card|
-      "#{memo}#{memo.empty? ? '' : '  '}#{opts[:mask_cards] ? '**' : card}"
-    end
+    [solid_points, variable_points]
   end
 end
